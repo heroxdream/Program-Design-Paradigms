@@ -1,0 +1,15 @@
+ ======================= Alternative Data Definition=====================
+
+alternative data definition 1
+
+(define-struct editor [pre post])
+ Editor = (make-editor String String)
+ interpretation (make-editor s t) means the text in the editor is
+ (string-append s t) with the cursor displayed between s and t
+
+pros:
+	(1)Easier to get text before and after cursor
+	(2)Easier to insert or delete word
+
+cons:
+	(1)more difficult to move cursor left or right

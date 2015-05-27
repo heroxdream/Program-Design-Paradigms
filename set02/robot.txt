@@ -1,0 +1,61 @@
+ ======================= Alternative Data Definition=====================
+
+ alternative data definition 1
+ 
+ Direction and Position remains the same
+
+ (define-structure robot [x y d])
+ A Robot is a make-robot[Coordinate Coordinate Direction]
+ interpretation: two coordinates represent the robot's position,
+                 direction represent the robot's heading direction.
+
+ pros:
+	(1)Easier to extract robot's x and y coordinate
+	(2)Easier to understand
+	(3)Less nested struture
+
+ cons:
+	(1)Difficult to manipulate robot's position
+	(2)Cannot detach robot's position from robot.
+	(3)Less capibility to extend this program
+
+
+
+=======================================================================
+
+
+
+ alternative data definition 2
+
+ A Vector is a make-vector(Coordinate Coordinate)
+ interpretation:  a geometric entity endowed with magnitude and direction
+ (define-struct vector [Coordinate Coordinate])
+
+ A Direction is one of the 4 following 4 vectors:
+ - (-1, 0) ; heading left
+ - (1, 0)  ; heading right
+ - (0, -1) ; heading up
+ - (0, 1)  ; heading down
+ interpretation: unit Vector
+	e.g: if current robot's positon is (0, 0), move left by 10 pixels
+	     its next position will be (0, 0) + 10 * (-1, 0) = (-10, 0)
+ 
+ (define-structure Robot[x y d])
+ A Robot is a make-robot[Coordinate Coordinate Direction]
+ 
+ pros:
+	(1)easier function to compute next position
+	(2)high-efficiency
+	(3)easier to extend the program
+
+ cons:
+	(1)more difficult to understand and read the logic of the program
+	(2)more difficult to find bugs
+
+PS: I am really excited about this idea. But it is after I have finished my first version that
+    I realized I can program in this way.
+	This data definition will put the whole program into math, and the whole program will be
+	much simplified. In my version, there are many direction functions with 4 branches. But if 
+	I have follwed this data definition, I only need one math function to compute, no branches.
+	This will be a neat and clean program.
+	

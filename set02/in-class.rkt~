@@ -1,0 +1,13 @@
+;; The first three lines of this file were inserted by DrRacket. They record metadata
+;; about the language level of this file in a form that our tools can easily process.
+#reader(lib "htdp-beginner-reader.ss" "lang")((modname in-class) (read-case-sensitive #t) (teachpacks ((lib "arrow-gui.rkt" "teachpack" "htdp"))) (htdp-settings #(#t constructor repeating-decimal #f #t none #f ((lib "arrow-gui.rkt" "teachpack" "htdp")))))
+
+
+; time+ : Time Time -> Time
+; Increments t1 by t2 amount of time
+; STRATEGY: ?
+(define (time+ t1 t2) ...)
+; time- : Time Time -> Time
+; Decrements t1 by t2 amount of time
+; STRATEGY: ?
+(define (time- t1 t2) ...)

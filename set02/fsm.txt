@@ -1,0 +1,18 @@
+======================= Alternative Data Definition=====================
+ 
+ alternative data definition 1
+
+ A SequenceState is one of:
+- BEGIN
+- B
+- C
+- FINISH
+- ERROR
+
+pros
+	(1)Easier to understand and read
+	(2)Easier to matain and extend
+
+cons
+	(1)one more state makes the program more complicated
+
