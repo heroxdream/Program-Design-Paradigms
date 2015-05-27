@@ -1,0 +1,52 @@
+Partner1 CCS ID: hanxuan
+
+Partner2 CCS ID: sudjoshi
+
+
+Grade Report
+
+Design Grading:
+
+Correctness:           9/10
+OOP vs Functional       5/5
+Data Design:            5/5
+Function Specification: 5/5
+Implementation:         5/5
+Style:                  5/5
+
+Deductions:
+used unnecessary conversion of objects to structs. (-15)
+
+Design Total:         19/35
+
+Notes:
+
+
+Codewalk Grading:
+
+Partner1:
+
+Q&A:                      10/10
+Presentation:              5/5
+
+Deductions:
+Notes:
+
+Partner 1 Codewalk Total  15/15
+
+
+Partner2:
+
+Q&A:                      10/10
+Presentation:              5/5
+
+Deductions:
+Notes:
+
+Partner 2 Codewalk Total: 15/15
+
+
+
+Overall Score for Partner 1: 34/50
+Overall Score for Partner 2: 34/50
+

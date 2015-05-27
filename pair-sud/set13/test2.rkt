@@ -1,0 +1,500 @@
+#lang racket
+
+(require "extras.rkt")
+(require rackunit)
+(require lang/posn)
+(require 2htdp/image)
+(require 2htdp/universe)
+(define TIME-ON-TASK 20)
+
+
+(provide Unit<%>)
+(provide StatefulWorld<%>)
+;(provide mk-world)
+;(provide mk-ally)
+;(provide mk-enemy)
+;(provide mk-merc)
+
+(define WIDTH 400)
+(define HEIGHT 500)
+(define MT (empty-scene WIDTH HEIGHT))
+(define K 30)
+(define INITIAL-HEIGHT 50)
+(define RATE 5)
+
+(define Behavior<%>
+  (interface ()
+    touch-border?
+    within?
+    get-img
+    get-color
+    ))
+
+(define AllyBehavior%
+  (class* object% (Behavior<%>)
+    (super-new)
+    (init-field)
+    
+    (define COLOR "green")
+    (define LENGTH 20)
+    (define IMG (rectangle LENGTH LENGTH "solid" COLOR))
+    
+    (define/public (touch-border? loc border)
+      (>= (+ (posn-y loc) (/ LENGTH 2)) border))
+    
+    (define/public (within? loc x y)
+      (and (< (- (posn-x loc) (/ LENGTH 2)) x (+ (posn-x loc) (/ LENGTH 2)))
+           (< (- (posn-y loc) (/ LENGTH 2)) y (+ (posn-y loc) (/ LENGTH 2)))))
+    
+    (define/public (get-img)
+      IMG)
+    
+    (define/public (get-color)
+      COLOR)
+    
+    ))
+
+(define EnemyBehavior%
+  (class* object% (Behavior<%>)
+    (super-new)
+    (init-field)
+    
+    (define COLOR "red")
+    (define RADIUS 12)
+    (define IMG (circle RADIUS "solid" COLOR))
+    
+    (define/public (touch-border? loc border)
+      (>= (+ (posn-y loc) (/ RADIUS 2)) border))
+    
+    (define/public (within? loc x y)
+      (< (sqrt (+ (sqr (- x (posn-x loc))) (sqr (- y (posn-y loc))))) RADIUS))
+    
+    (define/public (get-img)
+      IMG)
+    
+    (define/public (get-color)
+      COLOR)
+    
+    ))
+
+(define Draw<%>
+  (interface ()
+    ; draw : Image -> Image
+    draw))
+
+(define ToString<%>
+  (interface ()
+    ; to-string : Image -> Image
+    to-string))
+
+; Represents a unit in the game.
+(define Unit<%>
+  (interface ()
+    ; get-loc : -> posn
+    ; Returns the location of this unit as a posn.
+    get-loc
+ 
+    ; get-color : -> Color
+    ; Returns the color of this unit.
+    get-color
+    
+    ; mutate : -> Unit<%>
+    ; Returns a new AllyUnit% or EnemyUnit% if the current Unit<%> is an
+    ; instance of MercenaryUnit
+    mutate!
+    
+    ; move! : -> Void
+    ; Moves a Unit<%> after one tick
+    move!
+    
+    ; score-one-tick: Coordinate -> Number
+    ; Computes the score after one tick if the Unit<%> is in base
+    score-one-tick
+    
+    ; score-one-click: Coordinate Coordinate -> Number
+    ; Computes the score after one click if the mouse is one the Unit<%>
+    score-one-click
+    ))
+
+(define AllyUnit%
+  (class* object% (Unit<%> Draw<%> ToString<%>)
+    (super-new)
+    (init-field loc
+                v
+                [behavior (new AllyBehavior%)])
+    
+    ; get-loc : -> posn
+    (define/public (get-loc)
+      loc)
+    
+    
+    ; get-color : -> Color
+    (define/public (get-color)
+      (send behavior get-color))
+    
+    ; mutate! : -> Void
+    (define/public (mutate!) 
+      (void))
+    
+    ; move! : -> Void
+    ; Moves a Unit<%> after one tick
+    (define/public (move!)
+      (set! loc (make-posn (posn-x loc) (+ v (posn-y loc)))))
+    
+    ; score-one-tick: Coordinate -> Number
+    (define/public (score-one-tick border)
+      (if (send behavior touch-border? loc border) 20 0))
+    
+ 
+    ;
+    (define/public (draw bkg)
+      (place-image (send behavior get-img) (posn-x loc) (posn-y loc) bkg))
+    
+    (define/public (to-string)
+      (string-append "AllyUnit location" (~v loc) 
+                     " velocity" (~v v)
+                     " | "))
+    
+    (define/public (score-one-click x y)
+      (if (send behavior within? loc x y) -20 0))
+    
+    
+    
+    ))
+
+(define EnemyUnit%
+  (class* object% (Unit<%> Draw<%> ToString<%>)
+    (super-new)
+    (init-field loc 
+                v
+                [behavior (new EnemyBehavior%)])
+    
+    ; get-loc : -> posn
+    (define/public (get-loc)
+      loc)
+
+    ; get-color : -> Color
+    (define/public (get-color)
+      (send behavior get-color))
+    
+    ; mutate! : -> Void
+    (define/public (mutate!) 
+      (void))
+    
+    ; move! : -> Void
+    ; Moves a Unit<%> after one tick
+    (define/public (move!)
+      (set! loc (make-posn (posn-x loc) (+ v (posn-y loc)))))
+    
+    ; score-one-tick: Coordinate -> Number
+    (define/public (score-one-tick border)
+      (if (send behavior touch-border? loc border) -40 0))
+    
+ 
+    ;
+    (define/public (draw bkg)
+      (place-image (send behavior get-img) (posn-x loc) (posn-y loc) bkg))
+    
+    (define/public (to-string)
+      (string-append "EnemyUnit location" (~v loc)
+                     " velocity" (~v v)
+                     " | "))
+    
+    (define/public (score-one-click x y)
+      (if (send behavior within? loc x y) 40 0))
+    
+    
+    
+    ))
+
+(define MercenaryUnit%
+  (class* object% (Unit<%> Draw<%> ToString<%>)
+    (super-new)
+    (init-field loc 
+                v
+                [behavior (new AllyBehavior%)]
+                [ally 1])
+    
+    ; get-loc : -> posn
+    (define/public (get-loc)
+      loc)
+
+    ; get-color : -> Color
+    (define/public (get-color)
+      (send behavior get-color))
+    
+    ; mutate! : -> Void
+    (define/public (mutate!) 
+      (local((define new-behavior
+               (if (= ally 1) (new EnemyBehavior%) (new AllyBehavior%))))
+        (begin (set! behavior new-behavior)
+               (set! ally (* ally -1)))))
+    
+    ; move! : -> Void
+    ; Moves a Unit<%> after one tick
+    (define/public (move!)
+      (set! loc (make-posn (posn-x loc) (+ v (posn-y loc)))))
+    
+    ; score-one-tick: Coordinate -> Number
+    (define/public (score-one-tick border)
+      (if (send behavior touch-border? loc border) (if (= 1 ally) 60 -60) 0))
+    
+ 
+    ;
+    (define/public (draw bkg)
+      (place-image (send behavior get-img) (posn-x loc) (posn-y loc) bkg))
+    
+    (define/public (to-string)
+      (string-append "EnemyUnit location" (~v loc)
+                     " velocity" (~v v)
+                     " | "))
+    
+    (define/public (score-one-click x y)
+      (if (send behavior within? loc x y) (if (= 1 ally) -60 60) 0))
+    
+    
+    
+    ))
+ 
+; Represents a mutable world object.
+(define StatefulWorld<%>
+  (interface ()
+    ; on-tick! : -> Void
+    ; EFFECT: mutates this world to its next state.
+    on-tick!
+ 
+    ; on-mouse! : Coordinate Coordinate MouseEvent -> Void
+    ; EFFECT: mutates this world to its next state from the given mouse
+    ; parameters.
+    on-mouse!
+ 
+    ; target-loc : -> posn
+    ; Returns the center of the target as a posn.
+    target-loc
+ 
+    ; get-units : -> ListOf<Unit<%>>
+    ; Returns the current units in this world.
+    get-units
+ 
+    ; add-unit! : Unit<%> -> Void
+    ; EFFECT: adds the given unit to the world
+    add-unit!
+ 
+    ; get-base-height : -> Natural
+    ; Returns the height of the base, in pixels.
+    get-base-height
+    
+    after-tick
+    
+    after-click
+    ))
+
+(define World%
+  (class* object%(StatefulWorld<%> Draw<%> ToString<%>)
+    (super-new)
+    (init-field units 
+                minvel
+                maxvel
+                [tx 0]
+                [ty 0]
+                [tick 0]
+                [score 0])
+
+    (define RATE/ADD 40)
+    (define RATE/MUTATE 30)
+    (define GAMEOVER-IMG (text "GAME OVER" 40 "red"))
+    (define MAX-SCORE 2250)
+    (define MIN-SCORE -200)
+    (define OUTTER-RADIUS 10)
+    (define INNER-RADIUS 5)
+    (define TARGET-IMG 
+      (scene+line 
+       (scene+line 
+        (place-image  (circle INNER-RADIUS "outline" "red") 
+                      OUTTER-RADIUS OUTTER-RADIUS
+                      (circle OUTTER-RADIUS "outline" "red")) 
+                   0 10 20 10 "black") 
+       10 0 10 20 "black"))
+   
+    
+    ; on-tick! : -> Void
+    (define/public (on-tick!)
+      
+      (set! tick (add1 tick))
+      
+      (unit-move!)
+      
+      (define remain/units (remain-one-tick))
+      
+      (define score/new (+ score (score-increment-after-one-tick)))
+      
+      (set! units remain/units)
+      
+      (set! score score/new)
+      
+      (if (= 0 (modulo tick RATE/ADD)) 
+          (add-unit! (random-new-unit maxvel minvel))
+          (void tick))
+      
+      (if (= 0 (modulo tick RATE/MUTATE))
+          (unit-mutate!) 
+          (void tick)))
+    
+    (define (score-increment-after-one-tick)
+      (foldr (lambda (u s) (+ s (send u score-one-tick (border)))) 0 units))
+    
+    (define (unit-move!)
+      (for-each (lambda (u) (send u move!)) units))
+    
+    (define (unit-mutate!)
+      (for-each (lambda (u) (send u mutate!)) units))
+    
+    (define/public (remain-one-tick)
+      (filter (lambda (u) (= 0 (send u score-one-tick (border)))) units))
+    
+    (define (border) (- HEIGHT (get-base-height)))
+ 
+    ; on-mouse! : Coordinate Coordinate MouseEvent -> Void
+    ; Strategy: data decomposition on e : MouseEvent
+    (define/public (on-mouse! x y e)
+      (cond 
+        [(string=? e "button-down") 
+         (begin
+           (set! score (+ score (score-increment-one-click x y)))
+           (set! units (remain-units-one-click x y)))]
+        [else (begin (set! tx x) (set! ty y))]))
+    
+    (define (score-increment-one-click x y)
+      (foldr (lambda (u s) (+ s (send u score-one-click x y))) 0 units))
+    
+    (define (remain-units-one-click x y)
+      (filter (lambda (u) (= 0 (send u score-one-click x y))) units))
+ 
+    ; target-loc : -> posn
+    (define/public (target-loc)
+      (make-posn tx ty))
+ 
+    ; get-units : -> ListOf<Unit<%>>
+    (define/public (get-units)
+      units)
+ 
+    ; add-unit! : Unit<%> -> Void
+    (define/public (add-unit! u)
+      (set! units (cons u units)))
+ 
+    ; get-base-height : -> Natural
+    (define/public (get-base-height)
+      (+ INITIAL-HEIGHT (/ score RATE)))
+    
+    ;
+    (define (draw-units-base-score bkg)
+      (local((define units-base-img 
+               (foldr (lambda (u img) (send u draw img)) 
+                      (place-image (base-img) (base-x) (base-y) bkg) 
+                      units)))
+        (if (game-over?)
+            (overlay/align "middle" "bottom" GAMEOVER-IMG units-base-img)
+            (overlay/align "middle" "bottom" (score-img) units-base-img))))
+    
+    (define/public (draw bkg)
+      (place-image TARGET-IMG tx ty (draw-units-base-score bkg)))
+    
+    ;
+    (define/public (after-tick)
+      (if (game-over?) this (begin (on-tick!) this)))
+    
+    (define (game-over?)
+      (or (<= score MIN-SCORE) (>= score MAX-SCORE)))
+    
+    (define/public (after-click x y e)
+      (if (game-over?) this (begin (on-mouse! x y e) this)))
+
+    ;
+    (define (base-img)
+      (rectangle WIDTH (get-base-height) "solid" "yellow"))
+
+    (define (score-img) 
+      (text (string-append "Score: " (number->string score)) 40 "black"))
+    
+    ;
+    (define (base-x)
+      (/ WIDTH 2))
+    
+    (define (base-y)
+      (- 500 (/ (get-base-height) 2)))
+    
+    
+    (define/public (to-string)
+      (local((define units-str 
+               (foldr (lambda (u str) 
+                        (string-append (send u to-string) str)) "" units)))
+        (string-append units-str 
+                       " | score "  (~v score)
+                       " | height " (~v (get-base-height))
+                       " | border " (~v (border))
+                       " | minvel "  (~v minvel)
+                       " | maxvel "  (~v maxvel)
+                       " | tick "  (~v tick))))
+    
+    
+    
+    
+    ))
+
+
+ 
+; A Velocity is a Natural, representing Pixels/tick in the downward direction.
+ 
+; mk-world : Velocity Velocity Natural -> StatefulWorld<%>
+; Creates a world with num-units initial random units,
+; where units have the specified min and max velocity.
+; WHERE: minvel <= maxvel
+(define (mk-world maxvel minvel num-units) 
+  (new World% [units (rand-units maxvel minvel num-units)]
+       [minvel minvel] [maxvel maxvel]))
+
+(define (rand-units maxvel minvel num-units)
+  (local ((define lst '()))
+    (for ([i num-units])
+      (set! lst (cons (random-new-unit maxvel minvel) lst)))
+    lst))
+
+
+(define (random-new-unit maxvel minvel)
+  (if (<= 20 (random K) 30)
+      (mk-ally (make-posn (random WIDTH) 0) (rand/vel maxvel minvel))
+      (if (<= 10 (random K) 20)
+          (mk-enemy (make-posn (random WIDTH) 0) (rand/vel maxvel minvel))
+          (mk-merc (make-posn (random WIDTH) 0) (rand/vel maxvel minvel)))))
+
+(define (rand/vel maxvel minvel)
+  ( + minvel (ceiling (* (- maxvel minvel) (random)))))
+
+; mk-enemy : posn Velocity -> Unit<%>
+; Creates an enemy unit with the given parameters.
+(define (mk-enemy po v)
+  (new EnemyUnit% [loc po] [v v]))
+ 
+; mk-ally : posn Velocity -> Unit<%>
+; Creates an ally unit with the given parameters.
+(define (mk-ally po v)
+  (new AllyUnit% [loc po] [v v]))
+;(new EnemyUnit% [loc po] [v v]))
+ 
+; mk-merc : posn Velocity -> Unit<%>
+; Creates a mercenary unit with the given parameters.
+(define (mk-merc po v)
+  (new MercenaryUnit% [loc po] [v v]))
+  ;(new EnemyUnit% [loc po] [v v]))
+
+(define WORLD (mk-world 5 1 10))
+
+;; run-world : World<%> -> World<%>
+(define (run-world initial-world)
+  (big-bang initial-world
+            (on-tick (λ (w) (send w after-tick)))
+            (on-mouse (λ (w x y mev) (send w after-click x y mev)))
+            (on-draw (λ (w) (send w draw MT)))))
+
+;; run : -> World%
+(define (run) (run-world WORLD))

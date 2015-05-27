@@ -1,0 +1,244 @@
+#lang racket
+(require rackunit)
+(require 2htdp/universe)
+(require 2htdp/image)
+(require "extras.rkt")
+
+; functional ball-and-box: 
+; - box has draggable right edge
+; - ball doesnt react to updated box
+
+;; start this with (run).
+
+;; Exercise: fix the program so the ball reacts appropriate to updated bounds
+
+;; A WorldObj<%> implements each of the following big-bang handlers.
+(define WorldObj<%>
+  (interface ()
+    ; tick : -> WorldObj<%>
+    ; Computes the next state of this object.
+    tick
+    
+    ; handle-mouse : Coordinate Coordinate MouseEvent -> WorldObj<%>
+    ; Handles a mouse event and computes the next object state.
+    handle-mouse
+    
+    ; handle-key : KeyEvent -> WorldObj<%>
+    ; Handles a key press and computes the next object state.
+    handle-key
+    
+    ; render : Image -> Image
+    ; Draws this object onto the given image.
+    render))
+
+;; A World% is a naive container for WorldObj<%>.
+;; All it does is delegate to the appropriate handlers of its subcomponents.
+(define World%
+  (class* object% (WorldObj<%>)
+    (init-field objs) ; ListOf<WorldObj<%>>
+    
+    ; tick : -> World%
+    ; Computes the next world state. 
+    (define/public (tick)
+      (new World% [objs (map (λ (o) (send o tick)) objs)]))
+
+    ; handle-mouse : Coordinate Coordinate MouseEvent -> World%
+    ; Handles a mouse event and computes the next world state.
+    (define/public (handle-mouse x y mev)
+      (new World% [objs (map (λ (o) (send o handle-mouse x y mev)) objs)]))
+    
+    ; handle-key : KeyEvent -> World<%>
+    ; Handles a key press and computes the next world state.
+    (define/public (handle-key kev)
+      (new World% [objs (map (λ (o) (send o handle-key kev)) objs)]))
+    
+    ; render : Image -> Image
+    ; Draws the world objects, in order, onto the given img.
+    (define/public (render init-img)
+      (foldl (λ (o img) (send o render img)) init-img objs))
+    
+    (super-new)))
+
+(define Box<%>
+  (interface ()
+    ; right-edge : -> Coordinate
+    ; Returns the rightmost x coordinate of the box.
+    right-edge
+    ; left-edge : -> Coordinate
+    ; Returns the leftmost x coordinate of the box.
+    left-edge))
+
+;; A Box% represents is a resizable rectangle.
+;; It will resize itself in response to mouse drags on its right side.
+(define Box%
+  (class* object% (Box<%> WorldObj<%>)
+    (init-field x ; x Coordinate of box center
+                y ; y Coordinate of box center
+                w ; width of box in Pixels
+                h ; height of box in Pixels
+                [resizing? #f]) ; Boolean, indicates whether box is being resized
+
+    ;; private fields
+    (define LEFT-EDGE (- x (/ w 2)))  ; x Coordinate of box right edge
+    (define RIGHT-EDGE (+ x (/ w 2))) ; x Coordinate of box left edge
+    (define CLICK-THRESH 5) ; Coordinate, threshold within which to accept click
+    (define IMG (rectangle w h "outline" "black"))
+    
+    ;; accessors
+    ; right-edge : -> Coordinate
+    (define/public (right-edge) RIGHT-EDGE)
+    (define/public (left-edge) LEFT-EDGE)
+    
+    ;; doesn't respond to ticks or key events
+    (define/public (tick) this)
+    (define/public (handle-key kev) this)
+    
+    ;; handle-mouse : Coordinate Coordinate MouseEvent -> Box%
+    ;; Begin resize if mouse clicked "near" the right edge of this box:
+    ;; - button-down near right edge of box => mark box as resizing?
+    ;; - drag & resizing? => make right edge follow mouse
+    ;; - button-up => resizine done
+    ;; STRATEGY: data decomposition on mev : MouseEvent
+    (define/public (handle-mouse mx my mev)
+      (cond
+        [(mouse=? mev "button-down")
+         (if (near-right-edge? mx my)
+             (resize-start)
+             this)]
+        [(mouse=? mev "drag")
+         (if resizing?
+             (resize mx)
+             this)]
+        [(mouse=? mev "button-up") (resize-stop)]
+        [else this]))
+
+    ; [resize-start/stop fn] : -> Box%
+    ; Start and stop resizing of the box.
+    (define (resize-start) (new Box% [x x][y y][w w][h h][resizing? true]))
+    (define (resize-stop) (new Box% [x x][y y][w w][h h][resizing? false]))
+
+    ; resize : Coordinate -> Box%
+    ; Create a new Box% with the same left edge and right edge at the given x.
+    ; Can't resize past current left edge.
+    (define (resize new-right-edge)
+      (define new-width (- new-right-edge LEFT-EDGE))
+      (if (< new-width 0)
+          (new Box% [x LEFT-EDGE][y y][w 0][h h][resizing? resizing?])
+          (new Box%
+           [x (+ LEFT-EDGE (/ new-width 2))]
+           [y y]
+           [w new-width]
+           [h h]
+           [resizing? resizing?])))
+      
+    ; Returns true if given coords are within some threshold of the right edge.
+    (define (near-right-edge? other-x other-y)
+      (near-vertical-line? 
+       RIGHT-EDGE
+       (- y (/ h 2)) (+ y (/ h 2))
+       other-x other-y))
+
+    ;; Integer^5 -> Boolean
+    ;; returns true iff other-pos is "near" the line from posn1 to posn2
+    (define (near-vertical-line? line-x y1 y2 other-x other-y)
+      (and (<= (- y1 CLICK-THRESH) other-y (+ y2 CLICK-THRESH))
+           (<= (abs (- line-x other-x)) CLICK-THRESH)))
+
+    ; render : Image -> Image
+    (define/public (render img) (place-image IMG x y img))
+
+    (super-new)))
+
+(begin-for-test
+  (check-equal?
+    (local
+      ((define box1 (new Box% [x 200][y 50][w 100][h 20][resizing? #t]))
+       (define box2 (send box1 handle-mouse 252 50 "drag")))
+      (list
+        (send box1 left-edge)
+        (send box1 right-edge)
+        (send box2 left-edge)
+        (send box2 right-edge)))
+    (list 
+      150
+      250
+      150
+      252)))
+
+; A ball that resides in a Box%
+(define Ball%
+  (class* object% (WorldObj<%>)
+    (init-field x y   ; x and y Coordinate of ball center
+                box   ; the Box<%> containing the ball
+                xvel) ; integer horizontal velocity of ball in pixels/tick
+
+    (define RADIUS 20) ; radius in Pixels
+    (define IMG (circle RADIUS "outline" "red"))
+    (define RIGHT-SIDE (+ x RADIUS))
+    (define LEFT-SIDE (- x RADIUS))
+    (define NEXT-RIGHT-SIDE (+ RIGHT-SIDE xvel))
+    (define NEXT-LEFT-SIDE (+ LEFT-SIDE xvel))
+    
+    ;; ball doesn't respond to mouse or key events
+    (define/public (handle-mouse x y mev) 
+      (set! box (send box handle-mouse x y mev))
+      this)
+    (define/public (handle-key kev) this)
+
+    ; tick : -> Ball%
+    ; Computes the next ball after a tick.
+    (define/public (tick)
+      (if (would-hit-edge?)
+          (move-to-edge)
+          (move-forward)))
+    
+    ; <ball predicates> : -> Boolean
+    (define (would-hit-edge?)
+      (or (would-hit-right-edge?) (would-hit-left-edge?)))
+    (define (would-hit-right-edge?)
+      (>= NEXT-RIGHT-SIDE (send box right-edge)))
+    (define (would-hit-left-edge?)
+      (<= NEXT-LEFT-SIDE (send box left-edge)))
+    
+    ; <ball movement helpers> : -> Ball%
+    (define (move-to-edge)
+      (if (would-hit-right-edge?) 
+          (place-at-right-edge)
+          (place-at-left-edge)))
+    (define (move-forward)
+      (new Ball% [x (+ x xvel)][y y][box box][xvel xvel]))
+    (define (place-at-right-edge)
+      (new Ball% 
+           [x (- (send box right-edge) RADIUS)]
+           [y y]
+           [box box]
+           [xvel (- xvel)]))
+    (define (place-at-left-edge)
+      (new Ball% 
+        [x (+ (send box left-edge) RADIUS)]
+        [y y]
+        [box box]
+        [xvel (- xvel)]))
+
+    ; render : Image -> Image
+    (define/public (render img) (place-image IMG x y img))
+
+    (super-new)))
+
+(define BOX (new Box% [x 100][y 45][w 150][h 75]))
+(define BALL (new Ball% [x 100][y 45][box BOX][xvel 5]))
+(define WORLD (new World% [objs (list BOX BALL)]))
+
+(define EMPTY-SCENE (empty-scene 400 300))
+
+;; run-world : World<%> -> World<%>
+(define (run-world initial-world)
+  (big-bang initial-world
+            (on-tick (λ (w) (send w tick)))
+            (on-mouse (λ (w x y mev) (send w handle-mouse x y mev)))
+            (on-key (λ (w kev) (send w handle-key kev)))
+            (on-draw (λ (w) (send w render EMPTY-SCENE)))))
+
+;; run : -> World%
+(define (run) (run-world WORLD))
+

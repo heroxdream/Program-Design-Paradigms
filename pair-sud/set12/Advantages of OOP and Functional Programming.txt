@@ -1,0 +1,9 @@
+Advantages of Object Oriented programming:
+1. Object oriented programming lets the user maintain the state of the object all the time. The object can be mutated as and when required.
+2. It gives the flexibility of encapsulating the data and only the necessary parts of the program are available to the world. Abstraction is much easier with object oriented approach.
+3. Code reusability increases as the classes can inherit the behavior of other classes.
+
+Advantages of Functional programming:
+1. Functional programming is useful when every data has to go through the same set of instructions and modules can be created in a more composite way.
+2. As functional programming is composed purely of functions, modifying the output of the programming merely consists of changing the functions. 
+3. The shape of the data determines the shape of the program. A program can be as complex or as simple as its data design.

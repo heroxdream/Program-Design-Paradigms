@@ -1,0 +1,7 @@
+#lang racket
+(define A%
+  (class* object% ()
+    (init-field bs)
+    
+    ))
+

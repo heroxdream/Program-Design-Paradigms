@@ -1,0 +1,56 @@
+Partner1 CCS ID: hanxuan
+Partner2 CCS ID: sudjoshi
+
+
+Grader1: Rahul Kizhakkepachilamakol 
+Grader2: Prasad Memane
+
+04/01/2015
+
+
+Grade Report
+
+Design Grading:
+
+Correctness:           09/10
+Data Design:            6/6
+Function Specification: 6/6
+Implementation:         6/6
+Style:                  6/6
+
+Deductions:
+
+Design Total:         33/34
+
+Notes:
+
+
+Codewalk Grading:
+
+Partner1:
+
+Q&A:                      10/10
+Presentation:              6/6
+
+Deductions:
+Notes:
+
+Partner 1 Codewalk Total  16/16
+
+
+Partner2:
+
+Q&A:                      10/10
+Presentation:              6/6
+
+Deductions:
+Notes:
+
+Partner 2 Codewalk Total: 16/16
+
+Bonus  : +3
+
+Overall Score for Partner 1: 52/50
+Overall Score for Partner 2: 52/50
+
+Other Notes:
