@@ -1,0 +1,779 @@
+;; The first three lines of this file were inserted by DrRacket. They record metadata
+;; about the language level of this file in a form that our tools can easily process.
+#reader(lib "htdp-intermediate-lambda-reader.ss" "lang")((modname eval) (read-case-sensitive #t) (teachpacks ((lib "arrow-gui.rkt" "teachpack" "htdp"))) (htdp-settings #(#t constructor repeating-decimal #f #t none #f ((lib "arrow-gui.rkt" "teachpack" "htdp")))))
+(require "extras.rkt")
+(require rackunit)
+(define TIME-ON-TASK 15)
+
+
+(provide eval)
+(provide lambda?)
+(provide errstr?)
+(provide subst)
+(provide expr->expr/no-var)
+(provide expr=?)
+
+; A UniqueListOf<X> is a ListOf<X>
+; WHERE: none of the elements of the list are equal? to each other
+;Template: 
+;STRATEGY : Data decomposition on l : UniqueListOf<X>
+(define (unique-list-fn l)
+  (cond
+    [(empty? l) ...]
+    [else
+     (...(first l) ... (unique-list-fn (rest l)))]))
+ 
+; A 2ListOf<X> is a (cons X (cons X ListOf<X>))
+; Represents a list of 2 or more elements.
+
+; Template:
+; 2ListOf<X> -> ???
+; STRATEGY: data decomposition on 2lox : 2ListOf<X>
+; WHERE: X is Expr or ExprNoVar
+(define (2lox-fn 2lox)
+  (... (x-fn (first 2lox)) ...
+   ... (x-fn (second 2lox))... 
+   ...(list-fn (rest (rest 2lox)))...))
+
+
+
+ 
+; A Program is a:
+; - empty
+; - (cons Expr Program)
+; - (cons Def Program)
+; Represents a PDPLang program consisting of function defs and expressions.
+; WHERE: no two Defs have the same name
+ 
+; Template:
+; Program -> ???
+; STRATEGY: data decomposition on p : Program
+(define (program-fn p)
+  (cond 
+    [(empty? p) ...]
+    [(not (def? (first p))) 
+     (...(expr-fn (first p))... (program-fn (rest p))...)]
+    [else (...(def-fn (first p))... (program-fn (rest p))...)]))
+
+
+; An Expr is one of:
+; - Number
+; - Boolean
+; - Var
+; - ErrString
+; - Lambda  
+; - (make-arith ArithOp 2ListOf<Expr>) ; an arithmetic expression
+; - (make-bool BoolOp 2ListOf<Expr>)   ; a boolean expression
+; - (make-cmp CmpOp 2ListOf<Expr>)     ; a comparison expression
+; - (make-if-exp Expr Expr Expr) ; an if conditional
+; - (make-call Expr ListOf<Expr>) ; a function call
+; Represents a PDPLang expression.
+
+; Template:
+; Expr -> ???
+; STRATEGY: data decomposition on expr : Expr
+(define (expr-fn expr)
+  (cond
+    [(number? expr) ...]
+    [(boolean? expr) ...]
+    [(symbol? expr) ...]
+    [(string? expr) ...]
+    [(lam? expr) ...]
+    [(arith? expr) (...(arithop-fn (arith-op expr))... 
+                       ...(2lox-fn (arith-args expr))...)]
+    [(bool? expr) (...(boolop-fn (bool-op expr))... 
+                       ...(2lox-fn (bool-args expr))...)]
+    [(cmp? expr) (...(cmpop-fn (cmp-op expr))... 
+                       ...(2lox-fn (cmp-args expr))...)]
+    [(if-exp? expr) (...(expr-fn (if-exp-test expr))...
+                        ...(expr-fn (if-exp-branch1 expr))...
+                        ...(expr-fn (if-exp-bramch2 expr))...)]
+    [else (...(expr-fn (call-fn expr))...
+           ...(list-fn (call-args expr)...))]))
+
+(define-struct arith (op args))
+; An Arith is a (make-arith ArithOp 2ListOf<Expr>)
+; Template:
+; Arith -> ???
+; STRATEGY : Data decomposition on a : Arith
+(define (arith-fn a)
+  (... (arithop-fn (arith-op a)) ... (2lox-fn (arith-args a))))
+
+(define-struct bool (op args))
+;A Bool is a (make-bool BoolOp 2ListOf<Expr>)
+;Template:
+;Bool -> ???
+;STRATEGY : Data decomposition on b : Bool
+(define (bool-fn b)
+  (... (boolop-fn (bool-op b)) ... (2lox-fn (bool-args b))))
+
+(define-struct cmp (op args))
+;A Cmp is a (make-cmp CmpOp 2ListOf<Expr>)
+;Template:
+;Cmp -> ???
+;STRATEGY : Data decomposition on c : Cmp
+(define (cmp-fn a)
+  (... (cmpop-fn (cmp-op c)) ... (2lox-fn (cmp-args c))))
+
+
+(define-struct if-exp (test branch1 branch2))
+;An If-exp is a (make-if-exp Expr Expr Expr)
+;Template
+;If-exp -> ???
+;STRATEGY : Data decomposition on i : If-exp
+(define (if-exp-fn i)
+  (... (expr-fn (if-exp-test i)) ... (expr-fn (if-exp-branch1 i))  .... 
+       (expr-fn (if-exp-branch2 i))))
+(define-struct call (fn args))
+ 
+
+; A Var is a Symbol, representing PDPLang variable.
+ 
+; An ErrString is a String, representing a PDPLang error message.
+ 
+
+; A Lambda is a (make-lam UniqueListOf<Param> Expr)
+; Represents a lambda expression in PDPLang
+(define-struct lam (params body))
+;Template:
+;STRATEGY : Data decomposition on l : Lambda
+(define (lambda-fn l)
+  ( .... (unique-list-fn (lambda-params l) ... (expr-fn (lambda-body)))))
+
+         
+ 
+; A Param is a Var, representing a function parameter.
+ 
+; An ArithOp is one of:
+; - '+
+; - '-
+; - '*
+; - '/
+; Represents an arithmetic operation in PDPLang
+
+(define ADD '+)
+(define SUB '-)
+(define MUL '*)
+(define DIV '/)
+ 
+;Template:
+;ArithOp -> ???
+;STRATEGY: Data decomposition on a: ArithOp
+(define (arithop-fn a)
+  (cond
+    [(symbol=? ADD a) ...]
+    [(symbol=? SUB a) ...]
+    [(symbol=? MUL a) ...]
+    [(symbol=? DIV a) ...]))
+    
+    
+         
+         
+; A BoolOp is one of:
+; - 'and
+; - 'or
+; Represents a boolean operation in PDPLang
+
+(define AND 'and)
+(define OR 'or)
+ 
+;Template :
+;BoolOp -> ???
+;STRATEGY: Data decomposition on b : BoolOp
+(define (boolop-fn b)
+  (cond
+    [(symbol=? AND b) ...]
+    [(symbol=? OR b) ...]))
+
+; A CmpOp is one of:
+; - '=
+; - '<
+; - '>
+; Represents a comparison operation in PDPLang
+ 
+(define EQUAL '=)
+(define LT '<)
+(define GT '>)
+;TEMPLATE : 
+;CmpOp -> ???
+;STRATEGY : Data decompositio on c : CmpOp
+(define (cmpop-fn c)
+  (cond
+    [(symbol=? EQUAL c) ...]
+    [(symbol=? LT c) ...]
+    [(symbol=? GT c) ...]))
+
+; A Def is a (make-def FnName UniqueListOf<Param> Expr)
+; Represents the definition of a function with the specified parameters.
+(define-struct def (name params body))
+
+;Template:
+;Def -> ???
+;STRATEGY: Data decomposition on d : Def
+(define (def-fn d)
+  (... (def-name d) ... (unique-list-fn (def-params d)) ... 
+       (expr-fn (def-body d))))
+  
+ 
+; A FnName is a Var, representing a function name.
+ 
+; A Result is a:
+; - Number
+; - Boolean
+; - ErrString
+; - Lambda
+
+;Template: 
+;Result -> ???
+;STRATEGY: Data decomposition on r : Result
+(define (result-fn r)
+  (cond
+    [(number? r) ...]
+    [(boolean? r) ...]
+    [(string? r) ...]
+    [(lam? r) (...(lambda-fn r)...)]))
+
+
+; An ExprNoVar is one of:
+; - Number
+; - Boolean
+; - StaticDist
+; - ErrString
+; - LamNoVar
+; - (make-arith ArithOp 2ListOf<ExprNoVar>) ; an arithmetic expression
+; - (make-bool BoolOp 2ListOf<ExprNoVar>)   ; a boolean expression
+; - (make-cmp CmpOp 2ListOf<ExprNoVar>)     ; a comparison expression
+; - (make-if-exp ExprNoVar ExprNoVar ExprNoVar) ; an if conditional
+; - (make-call ExprNoVar ListOf<ExprNoVar>) ; a function call
+; Represents an Expr without explicit variables.
+
+; Template:
+; ExprNoVar -> ???
+; STRATEGY: data decomposition on exprnv : ExprNoVar
+(define (expr-no-var-fn expr-no-var)
+  (cond
+    [(number? expr-no-var) ...]
+    [(boolean? expr-no-var) ...]
+    [(list? expr-no-var) ...]
+    [(string? expr-no-var) ...]
+    [(lam/no-var? expr-no-var) ...]
+    [(arith? expr-no-var) (...(arithop-fn (arith-op expr-no-var))... 
+                       ...(2lox-fn (arith-args expr-no-var))...)]
+    [(bool? expr-no-var) (...(boolop-fn (bool-op expr-no-var))... 
+                       ...(2lox-fn (bool-args expr-no-var))...)]
+    [(cmp? expr-no-var) (...(cmpop-fn (cmp-op expr-no-var))... 
+                       ...(2lox-fn (cmp-args expr-no-var))...)]
+    [(if-exp? expr-no-var) (...(expr-no-var-fn (if-exp-test expr-no-var))...
+                        ...(expr-no-var-fn (if-exp-branch1 expr-no-var))...
+                        ...(expr-no-var-fn (if-exp-bramch2 expr-no-var))...)]
+    [else (...(expr-no-var-fn (call-fn expr-no-var))...
+           ...(list-fn (call-args expr-no-var)...))]))
+ 
+; A StaticDist is a (list Depth Index)
+; Represents a variable reference
+; where depth is number of additional lambdas between this var ref and the
+; lambda for which this variable is a parameter,
+; and index is the (0-based) position of this variable in that lambda's
+; parameter list.
+;Template:
+;StaticDist -> ???
+;STRATEGY: Data decomposition on s : StaticDist
+(define (static-dist-fn s)
+  (...(first s) ... (second s)))
+
+
+; A Depth is a Natural
+; An Index is a Natural
+ 
+; A LamNoVar is a (make-lam/no-var ExprNoVar)
+(define-struct lam/no-var (body))
+;Template
+;lam/no-var -> ???
+;STRATEGY : Data decomposition on lnv : lam/no-var
+(define (lam/no-var-fn lnv)
+  (...(lam/no-var-body lnv)...))
+
+(define A1 (make-arith '/ (list 15 5)))
+(define A2 (make-arith '* (list A1 9)))
+(define A3 (make-arith '+ (list 998 true)))
+(define C1 (make-cmp 'or (list #true #false #true #false #true #false)))
+(define C2 (make-cmp 'and (list #true #false #true #false #true #false)))
+
+(define IF-EXPR1
+  (make-if-exp (make-cmp '= (list A1 10))
+               (make-arith '+ (list A1 A2 A3))
+               (make-bool 'and (list C1 C2 #false))))
+
+(define IF-EXPR2
+  (make-if-exp (make-cmp '> (list A1 10))
+               (make-arith '/ (list A1 A2 A3))
+               (make-bool 'and (list C1 C2 C2 C1))))
+
+(define LAM (make-lam '(x y) (make-arith '+ '(x y))))
+
+(define F (make-def 'f (list 'x 'y 'z) 
+                    (make-if-exp (make-cmp '> (list 'x 'y))
+                                 (make-call 'g (list 'x 'y 'z))
+                                 (make-arith '* (list 'x 'y 'z)))))
+
+(define G (make-def 'g 
+                     (list 'x 'y 'z)
+                     (make-arith '+ (list 'x 'y 'z))))
+
+(define CALL1 (make-call 'f (list 8 4 2)))
+
+(define P 
+  (list G IF-EXPR1 IF-EXPR2 'f 'g 10 "err: test-err" F #false LAM CALL1))
+ 
+
+; eval : Program -> ListOf<Result>
+; Evaluates a PDPLang program to a list of Results.
+; Specifically, evaluates the Exprs in p, in the context of the given Defs.
+; WHERE: A function may be called before it is defined.
+; WHERE: The produced results are in the same relative order as their 
+; originating Exprs in p.
+(define (eval p)
+  (local ((define defs (filter-defs p)))
+    (eval-with-defs p defs)))
+
+
+; Program ListOf<Def> -> ListOf<Result>
+(define (eval-with-defs p defs)
+  (cond 
+       [(empty? p) '()]
+       [(not (def? (first p))) 
+        (cons (expr->result (first p) defs) (eval-with-defs (rest p) defs))]
+       [else (eval-with-defs (rest p) defs)]))
+
+
+; Program -> ListOf<Def>
+(define (filter-defs p)
+  (cond
+    [(empty? p) '()]
+    [(not (def? (first p))) (filter-defs (rest p))]
+    [else (cons (first p) (filter-defs (rest p)))]))
+
+
+; Expr ListOf<Def> -> Result
+; data decomposition on e : Expr
+(define (expr->result expr defs)
+  (cond
+    [(or (number? expr) (boolean? expr) (string? expr) (lam? expr)) expr]
+    [(symbol? expr) (eval-symbol expr defs)]
+    [(arith? expr) 
+     (eval-operation (arith-op expr) 
+                     (lox->lst (arith-args expr) defs))]
+    [(bool? expr)
+     (eval-operation (bool-op expr) 
+                     (lox->lst (bool-args expr) defs))]
+    [(cmp? expr)
+     (eval-operation (cmp-op expr) 
+                      (lox->lst (cmp-args expr) defs))]
+    [(if-exp? expr) (eval-if-expr expr defs)]
+    [else (eval-call expr defs)]))
+
+
+; Expr List<Def> -> Result
+(define (eval-call ca defs)
+  (local ((define subfn (expr->result (call-fn ca) defs)))
+    (if (lambda? subfn)
+        (expr->result (mul-subst (lox->lst (call-args ca) defs) 
+                                 (lam-params subfn) 
+                                 (lam-body subfn)) 
+                      defs)
+        "err: subfn is NOT lambda in call")))
+
+; ListOf<Result> ListOf<Expr> Expr -> Expr
+(define (mul-subst results0 args0 expr0)
+  (local ((define compatable? (= (length results0) (length args0)))
+          (define (mul-subst/a results args expr-replace-so-far)
+            (cond
+              [(empty? results) expr-replace-so-far]
+              [else (mul-subst/a (rest results) 
+                                 (rest args)
+                                 (subst (first results) 
+                                        (first args) 
+                                        expr-replace-so-far))])))
+    (if compatable?
+        (mul-subst/a results0 args0 expr0)
+        "err: incompatable arguments numbers")))
+
+
+
+;If-Expr -> Result 
+(define (eval-if-expr ie defs)
+  (local ((define test-result (expr->result (if-exp-test ie) defs)))
+    (if (boolean? test-result)
+        (if test-result
+            (expr->result (if-exp-branch1 ie) defs)
+            (expr->result (if-exp-branch2 ie) defs))
+        "err: test result invaild")))
+
+; subst : Result Var Expr -> Expr
+; Replaces references to x in e with r.
+; Does not replace x with r if x occurs in the body of a lambda
+; that shadows x.
+; WHERE: r has no unbound variables
+; data decompostion on e : Expr
+(begin-for-test
+  (check-equal? (subst 4 'x 'x) 4 "x matches")
+  (check-equal? (subst 4 'y 'x) 'x "y doesnt match")
+  (check-equal?
+   (subst 4 'x (make-arith '+ '(x 5)))
+   (make-arith '+ '(4 5))
+   "subst in arith")
+  (check-equal?
+   (subst 4 'x (make-lam '(y) (make-arith '+ '(x y))))
+   (make-lam '(y) (make-arith '+ '(4 y)))
+   "subst in lambda")
+  (check-equal?
+   (subst 4 'x (make-lam '(x) (make-arith '+ '(x 5))))
+   (make-lam '(x) (make-arith '+ '(x 5)))
+   "dont subst shadowed vars in lambdas"))
+(define (subst r x expr) 
+  (cond 
+    [(or (number? expr) (boolean? expr) (string? expr)) expr]
+    [(symbol? expr) (if (eq? expr x) r expr)]
+    [(lam? expr) (if (member? x (lam-params expr))
+                     expr
+                     (make-lam (lam-params expr) (subst r x (lam-body expr))))]
+    [(arith? expr) (make-arith (arith-op expr)
+                               (subst-in-lst r x (arith-args expr)))]
+    [(bool? expr) (make-bool (bool-op expr)
+                             (subst-in-lst r x (bool-args expr)))]
+    [(cmp? expr) (make-cmp (cmp-op expr)
+                           (subst-in-lst r x (cmp-args expr)))]
+    [(if-exp? expr) (make-if-exp (subst r x (if-exp-test expr))
+                                 (subst r x (if-exp-branch1 expr))
+                                 (subst r x (if-exp-branch2 expr)))]
+    [else (make-call (call-fn expr)
+                     (subst-in-lst r x (call-args expr)))]))
+
+
+
+; Result Var ListOf<Expr> -> ListOf<Expr> 
+(define (subst-in-lst r x args)
+  (map (lambda (e) (subst r x e))
+       args))
+
+; Var List<Def> -> Lambda
+(define (eval-symbol var defs)
+  (local (;Var List<Def> -> Maybe<Def>
+          (define (find-def var defs)
+            (cond
+              [(empty? defs) #false]
+              [else (if (eq? var (def-name (first defs)))
+                        (first defs)
+                        (find-def var (rest defs)))]))
+          (define result (find-def var defs)))
+    (if (boolean? result)
+        "err: undefined var"
+        (make-lam (def-params result)
+                  (def-body result)))))
+
+; ListOf<Expr> -> ListOf<Result>
+(define (lox->lst lox defs)
+  (local ((define (eval-each-expr lox)
+            (map (lambda (e) (expr->result e defs))
+                 lox)))
+    (eval-each-expr lox)))
+
+
+; [ArithOp OR BoolOp OR ComOp] ListOf<Result> -> [Result or ErrString]
+(define (eval-operation op lst)
+  (if (compatable? lst)
+      (operate-on-lst op lst)
+      "err: incompatable between operator and args"))
+
+; [ArithOp OR BoolOp OR ComOp] 2ListOf<Result> -> Result
+; function composition
+(define (operate-on-lst op lst)
+  (if (arithop? op)
+      (arith-on-lst op lst)
+      (if (cmpop? op)
+          (com-on-lst op lst)
+          (operate-bool-on-lst op lst))))
+
+; Symbol -> Boolean
+(define (arithop? op)
+  (or (eq? op '+) (eq? op '-) (eq? op '*) (eq? op '/)))
+
+; Symbol -> Boolean
+(define (cmpop? op)
+  (or (eq? op '>)
+      (eq? op '=)
+      (eq? op '<)))
+
+; BoolOp 2ListOf<Result> -> Result
+; data decomposition on op : BoolOp
+(define (operate-bool-on-lst op lst)
+  (cond
+    [(eq? op 'and) (and-on-lst lst)]
+    [else (or-on-lst lst)]))
+
+; ListOf<Result> -> Boolean
+(define (compatable? lst)
+  (local (;
+          ;
+          (define (one-type? lst)
+            (or (andmap (lambda (r) (number? r))
+                        lst)   
+                (andmap (lambda (r) (boolean? r))
+                        lst))))
+    (one-type? lst)))
+
+; ArithOp -> [X X -> X]
+; data decomposition on aop : ArithOp
+(define (arithop->fn aop)
+  (cond 
+    [(eq? aop '+) +]
+    [(eq? aop '-) -]
+    [(eq? aop '*) *]
+    [(eq? aop '/) /]))
+
+; ArithOp 2ListOf<Result> -> Result
+(define (arith-on-lst aop alst0)
+  (local ((define op (arithop->fn aop))
+          (define divide-by-zero? (and (eq? / op)
+                                       (ormap (lambda (x) (zero? x))
+                                              (rest alst0))))
+          (define (arith-on-lst/a op alst operated-so-far)
+            (cond
+              [(empty? alst) operated-so-far]
+              [else (arith-on-lst/a op 
+                                    (rest alst)
+                                    (op operated-so-far
+                                        (first alst)))])))
+    (if divide-by-zero?
+        "err: divide-by-zero"
+        (arith-on-lst/a op 
+                        (rest (rest alst0)) 
+                        (op (first alst0) (second alst0))))))
+
+; 2ListOf<Result> -> Result
+(define (and-on-lst alst0)
+  (local(
+         ;
+         (define (and-on-lst/a alst operated-so-far)
+           (cond
+             [(empty? alst) operated-so-far]
+             [else (and-on-lst/a (rest alst)
+                                 (and (first alst) operated-so-far))])))
+    (and-on-lst/a (rest (rest alst0))
+                  (and (first alst0) (second alst0)))))
+
+; 2ListOf<Result> -> Result
+(define (or-on-lst alst0)
+  (local(
+         ;
+         (define (or-on-lst/a alst operated-so-far)
+           (cond
+             [(empty? alst) operated-so-far]
+             [else (or-on-lst/a (rest alst)
+                                (and (first alst) operated-so-far))])))
+    (or-on-lst/a (rest (rest alst0))
+                 (or (first alst0) (second alst0)))))
+
+; ComOp -> [X X -> X]
+; data decomposition on aop : ComOp
+(define (comop->fn aop)
+  (cond 
+    [(eq? '> aop) >]
+    [(eq? '= aop) =]
+    [(eq? '< aop) <]))
+
+; 2ListOf<Result> -> Result
+(define (com-on-lst aop alst0)
+  (local ((define op (comop->fn aop))
+          (define (com-on-lst/a op alst operated-so-far last-one)
+            (cond
+              [(empty? alst) operated-so-far]
+              [else (com-on-lst/a op 
+                                  (rest alst) 
+                                  (and operated-so-far 
+                                       (op last-one (first alst)))
+                                  (first alst))])))
+    (com-on-lst/a op 
+                  (rest alst0)
+                  (op (first alst0) (second alst0))
+                  (first alst0))))
+
+
+
+; lambda? : Lambda -> Boolean
+; Returns true if lam is a PDPLang lambda expression.
+(begin-for-test
+  (check-false (lambda? (make-lam '(x x y) 'x))))
+(define (lambda? lam)
+  (local (;
+          ;
+          ;
+          (define (unique? lst)
+            (cond
+              [(empty? lst) #true] 
+              [else (if (member? (first lst) (rest lst))
+                        #false
+                        (unique? (rest lst)))])))
+    (unique? (lam-params lam))))
+
+; errstr? : Expr -> Boolean
+; Returns true if e is a PDPLang ErrString expression.
+(define (errstr? e)
+  (string? e))
+
+
+(check-pred lambda? (first (eval (list F 'f))) "result is lambda")
+(check-pred errstr? (first (eval (list F 'g))) "err: undefined var")
+(check-pred errstr? (first (eval (list 'x))) "err: undefined var")
+
+
+
+; expr->expr/no-var : Expr -> ExprNoVar
+; Replaces Var in e with StaticDist.
+; WHERE: there are no unbound variables in e.
+(begin-for-test
+  (check-equal?
+   (expr->expr/no-var (make-lam '(x) 'x))
+   (make-lam/no-var '(0 0))
+   "basic lambda")
+  (check-equal?
+   (expr->expr/no-var (make-lam '(x y) (make-lam '(z) (make-call 'x '(y z)))))
+   (make-lam/no-var (make-lam/no-var (make-call '(1 0) '((1 1) (0 0)))))
+   "nested lambdas"))
+(define (expr->expr/no-var e0) 
+  (local (
+          ; ListOf<Expr> ListOf<Expr> -> ListOf<ExprNoVar>
+          (define (expr->expr/no-var-on-lst lst statdis-map)
+            (map (lambda (e) (expr->expr/no-var/a e statdis-map))
+                 lst))
+          
+          (define (expr->expr/no-var/a expr statdis-so-far)
+            (cond
+              [(or (number? expr) (boolean? expr) (string? expr)) expr]
+              [(symbol? expr) (retrive-map expr statdis-so-far)]
+              [(lam? expr) 
+               (make-lam/no-var 
+                (expr->expr/no-var/a (lam-body expr) 
+                                     (update-map (lam-params expr)
+                                                 statdis-so-far)))]
+              [(arith? expr) (make-arith (arith-op expr)
+                                         (expr->expr/no-var-on-lst 
+                                          (arith-args expr) statdis-so-far))]
+              [(bool? expr) (make-bool (bool-op expr)
+                                       (expr->expr/no-var-on-lst 
+                                        (bool-args expr) statdis-so-far))]
+              [(cmp? expr) (make-cmp (cmp-op expr)
+                                       (expr->expr/no-var-on-lst 
+                                        (cmp-args expr) statdis-so-far))]
+              [(if-exp? expr) (make-if-exp (expr->expr/no-var/a 
+                                            (if-exp-test expr) 
+                                            statdis-so-far)
+                                           (expr->expr/no-var/a 
+                                            (if-exp-branch1 expr)  
+                                            statdis-so-far)
+                                           (expr->expr/no-var/a 
+                                            (if-exp-branch2 expr)  
+                                            statdis-so-far))]
+              [else (make-call (expr->expr/no-var/a (call-fn expr) 
+                                                    statdis-so-far)
+                               (expr->expr/no-var-on-lst 
+                                        (call-args expr) statdis-so-far))])))
+    (expr->expr/no-var/a e0 '())))
+
+; 'x (list ('x '(0 1)) ('y '(0 0)))
+; Var ListOf<Expr> -> StaticDist
+(define (retrive-map key map)
+  (second  (first (filter (lambda (x) (eq? key (first x)))
+                  map))))
+
+; ListOf<Var> ListOf<Expr> -> ListOf<Expr>
+(define (update-map keys map)
+  (local (
+          ;Expr -> Expr
+          (define (add-1 e)
+            (list (first e) 
+                  (list (add1 (first (second e)))
+                        (second (second e)))))
+          ; ListOf<Expr> -> ListOf<Expr>
+          (define (add1-dis map)
+            (cond 
+              [(empty? map) '()]
+              [else (cons (add-1 (first map)) (add1-dis (rest map)))]))
+          ; ListOf<Var> ListOf<Expr> -> ListOf<Expr>
+          (define (add-params keys map)
+            (foldr (lambda (key lst) (cons (list key (list 0 (index key keys)))
+                                           lst))
+                    map
+                    keys)))
+    (add-params keys (add1-dis map))))
+
+; Var ListOf<Var> -> Natural
+(define (index key array)
+  (cond
+    [(empty? array) -1]
+    [else (if (eq? key (first array))
+              0
+              (add1 (index key (rest array))))]))
+
+
+
+
+
+; expr=? : Expr Expr -> Boolean
+; Returns true if e1 and e2 are structurally equivalent, up to some
+; renaming of variable names.
+(begin-for-test
+  (check
+   expr=?
+   (make-lam '(x) 'x)
+   (make-lam '(y) 'y)
+   "equivalent basic lambdas")
+  (check-false
+   (expr=?
+    (make-lam '(x y) (make-call 'x '(y)))
+    (make-lam '(y x) (make-call 'x '(y))))
+   "not equivalent")
+  (check
+   expr=?
+   (make-lam '(y) (make-lam '(x) (make-call 'y '(x))))
+   (make-lam '(x) (make-lam '(y) (make-call 'x '(y))))
+   "equivalent nested-lambdas"))
+(define (expr=? e1 e2)
+  (equal? (expr->expr/no-var e1) (expr->expr/no-var e2)))
+
+  
+; ExprNoVar ExprNoVar -> Boolean
+;(define (compare expr1 expr2)
+;  (cond 
+;    [(or (number? expr1) (boolean? expr1) (list? expr1) (string? expr1)) 
+;     (equal? expr1 expr2)]
+;    [(lam/no-var? expr1) 
+;     (compare (lam/no-var-body expr1) (lam/no-var-body expr2))]
+;    [(arith? expr1) (and (equal? (arith-op expr1) (arith-op expr2))
+;                         )]))
+
+;ListOf<ExprNoVar> ListOf<ExprNoVar> -> Boolean
+;(define (compare-lst lst1 lst2)
+;  (cond
+;    [(empty)]
+;    []))
+
+
+;(define (expr-no-var-fn expr-no-var)
+;  (cond
+;    [(number? expr-no-var) ...]
+;    [(boolean? expr-no-var) ...]
+;    [(list? expr-no-var) ...]
+;    [(string? expr-no-var) ...]
+;    [(lam/no-var? expr-no-var) ...]
+;    [(arith? expr-no-var) (...(arithop-fn (arith-op expr-no-var))... 
+;                       ...(2lox-fn (arith-args expr-no-var))...)]
+;    [(bool? expr-no-var) (...(boolop-fn (bool-op expr-no-var))... 
+;                       ...(2lox-fn (bool-args expr-no-var))...)]
+;    [(cmp? expr-no-var) (...(cmpop-fn (cmp-op expr-no-var))... 
+;                       ...(2lox-fn (cmp-args expr-no-var))...)]
+;    [(if-exp? expr-no-var) (...(expr-no-var-fn (if-exp-test expr-no-var))...
+;                        ...(expr-no-var-fn (if-exp-branch1 expr-no-var))...
+;                        ...(expr-no-var-fn (if-exp-bramch2 expr-no-var))...)]
+;    [else (...(expr-no-var-fn (call-fn expr-no-var))...
+;           ...(list-fn (call-args expr-no-var)...))]))

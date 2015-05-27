@@ -1,0 +1,74 @@
+Partner1 Name:
+Partner1 CCS ID: anpspk
+
+Partner2 Name:
+Partner2 CCS ID: hanxuan
+
+
+Grade Report
+
+Design Grading:
+
+Correctness:            9/10
+Data Design:            3/5
+Function Specification: 5/5
+Implementation:         4/5
+Style:                  5/5
+
+Deductions:
+
+Design Total:         26/30
+
+Notes:
+
+Data Design
+* itemization template has to have one clause for each case in the data definition
+  no exceptions
+
+Implementation
+* with a signature of Any -> Boolean, how do you know you can call first on the
+  function's argument? (i.e. have-tag? shouldn't be doing this, rest-content-expr?
+  shouldn't be doing this, rest-content-legal? shouldn't be doing this... you get
+  the picture)
+
+
+
+Codewalk Grading:
+
+Partner1:
+
+Q&A:                       8/10
+Data Design Alternatives:  5/5
+Presentation:              5/5
+
+Deductions:
+Notes:
+
+Q&A
+* good answers to Q's
+* need to review why we write template the way the book says
+
+Partner 1 Codewalk Total  18/20
+
+
+Partner2:
+
+Q&A:                       8/10
+Data Design Alternatives:  5/5
+Presentation:              5/5
+
+Deductions:
+Notes:
+
+Q&A
+* good answers to Q's
+* need to review why templates are written the way book specifies
+
+Partner 2 Codewalk Total: 18/20
+
+
+
+Overall Score for Partner 1: 44/50
+Overall Score for Partner 2: 44/50
+
+Other Notes:

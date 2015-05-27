@@ -1,0 +1,88 @@
+Partner1 Name: Anoop Pai
+Partner1 CCS ID: anpspk
+
+Partner2 Name: Xuan Han
+Partner2 CCS ID: hanxuan
+
+Code Walk: Tue 6pm 275 Ryder
+
+Grader1: Stephen Chang
+Grader2: Ashutosh Verma
+
+Grade Report
+
+Design Grading:
+
+Correctness:            9/10
+Data Design:            6/6
+Function Specification: 3/6
+Implementation:         6/6
+Style:                  6/6
+
+Deductions:
+
+Design Total:         30/34
+
+Notes:
+
+Data Design:
+- lam? case in expr-fn needs to decompose lambda
+Function Spec:
+- eval->result is generative recursive
+  - might not terminate (eg, def that calls itself infinitely)
+  - doesnt follow the template in call case 
+- arith/bool-operate halting measure can just be: hi - low
+ - it's a reasonable attempt to use generative recursion, and you
+   seem to understand the concept and have properly applied it,
+   but it's ultimately not needed here.
+   You can just do (apply + args)
+- cmp-operate, etc signature is not really Any
+Implementation:
+- eval-call inconsistent with signature -- assumes Call input
+Style:
+- never put parens on separate line: expr->expr/no-var
+
+Codewalk Grading:
+
+Partner1: anpspk
+
+Q&A:                      10/10
+Presentation:              6/6
+
+Deductions:
+Notes:
+Q: why didnt you decompose lam in expr-fn
+A: bc data def didnt have make-lam
+Q: can you rewrite eval-with-defs using list fn
+A: ans ok -- no
+Q: why does data decomposition always terminate?
+A: ans ok - recursion
+Q: does expr->expr/no-val terminate?
+A: ans ok -- yes
+
+Partner 1 Codewalk Total  16/16
+
+
+Partner2: hanxuan
+
+Q&A:                      10/10
+Presentation:              6/6
+
+Deductions:
+Notes:
+
+Q: call graph missing call from eval-arith to expr->result
+A: ans ok
+Q: any in arith/bool-operate?
+A: ans ok -- should be X -> Y
+Q: does expr->expr/no-val terminate?
+A: ans ok -- yes
+
+Partner 2 Codewalk Total: 16/16
+
+Overall Score for Partner 1: 46/50
+Overall Score for Partner 2: 46/50
+
+Other Notes:
+
+Good job on the code walk!

@@ -1,0 +1,74 @@
+Partner1 Name: Anoop Udayachandra Pai
+Partner1 CCS ID: anpspk
+
+Partner2 Name: Xuan Han
+Partner2 CCS ID: hanxuan
+
+
+Grade Report
+
+Design Grading:
+
+Correctness:            9/10
+Data Design:            6/6
+Function Specification: 4/6
+Implementation:         4/6
+Style:                  5/6
+
+Deductions:
+
+Design Total:         28/34
+
+Notes:
+
+Function Specification
+* lambdas need signature, purpose statemeng, etc. those are missing from
+  strings->images
+* signature for truncated-event-image doesn't match its purpose statement
+* missing argument in string->images signature
+
+Implementation
+* lists don't always have a 'rest' -- how would your remove-last function remove
+  the last from an empty ListOf<Username>?
+* in render-message-area, usage of the truncated-event-image is hard to follow
+* should've simplified text-color with a data definition that contains all of
+  the acceptable Symbol types (and then used that in Event type)
+
+Style
+* a lot of your predicates are missing the ? at the end of the function name
+
+Codewalk Grading:
+
+Partner1: Anoop
+
+Q&A:                       8/10
+Presentation:              6/6
+
+Deductions:
+Notes:
+
+* you eventually saw how to simplify the examples in e.g. update-events
+  but it took too much help
+
+Partner 1 Codewalk Total  14/16
+
+
+Partner2: Xuan
+
+Q&A:                       8/10
+Presentation:              6/6
+
+Deductions:
+Notes:
+
+* need to be more familiar with code you submit, it should've been very obvious
+  that your check-type? function behaved identical to eq?
+
+Partner 2 Codewalk Total: 14/16
+
+
+
+Overall Score for Partner 1: 42/50
+Overall Score for Partner 2: 42/50
+
+Other Notes:

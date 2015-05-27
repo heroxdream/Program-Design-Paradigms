@@ -1,0 +1,607 @@
+;; The first three lines of this file were inserted by DrRacket. They record metadata
+;; about the language level of this file in a form that our tools can easily process.
+#reader(lib "htdp-intermediate-lambda-reader.ss" "lang")((modname xexpr) (read-case-sensitive #t) (teachpacks ((lib "image.rkt" "teachpack" "2htdp") (lib "universe.rkt" "teachpack" "2htdp") (lib "batch-io.rkt" "teachpack" "2htdp"))) (htdp-settings #(#t constructor repeating-decimal #f #t none #f ((lib "image.rkt" "teachpack" "2htdp") (lib "universe.rkt" "teachpack" "2htdp") (lib "batch-io.rkt" "teachpack" "2htdp")))))
+(require "extras.rkt")
+
+(require rackunit)
+
+(require 2htdp/batch-io)
+
+(define TIME-ON-TASK 10)
+
+(provide xexpr-element?)
+
+(provide xexpr-tag)
+
+(provide xexpr-attributes)
+
+(provide xexpr-content)
+
+(provide attribute-value)
+
+(provide get-value)
+
+(provide xexpr-find)
+
+(provide xexpr-depth)
+
+(provide xexpr-elements)
+
+
+;Data definition -----------------------
+
+; An Xexpr is one of:
+; - Symbol
+; - String
+; - Number
+; - (cons Tag (cons ListOf<Attribute> ListOf<Xexpr>))
+; - (cons Tag ListOf<Xexpr>)
+; Represents an XML element.
+
+(define HTML-EMPTY '(html ((lang "en-US")) (body (p) (br) (p) (br))))
+(define HTML-WITH-TEXT
+  '(html
+    ((lang "en-US"))
+    (body
+     (p "Here is assignment " 5)
+     (br)
+     (p "This is a " (b "data") " definition."))))
+
+(define IMG '(img ((src "balls.png") (width "100") (height "50"))))
+
+(define xe1 
+  '(machine ((initial "red"))
+            (action ((state "red") (next "green"))
+                    (action ((state "brown") (next "green"))
+                            (action ((state "black") (next "green"))
+                                    (action))))
+            (action ((state "green") (next "yellow")))
+            (action ((state "yellow") (next "red")))))
+
+; Template:
+; xexpr-fn : Xexpr -> ???
+;(define (xexpr-fn xe) 
+;  (cond
+;    [(symbol? xe) ...]
+;    [(string? xe) ...]
+;    [(number? xe) ...]
+;    [else (local ((define optional-loa+content (rest xe)))
+;            (cond
+;              [(empty? optional-loa+content) ...]
+;              [else (... (first optional-loa+content)
+;                         ... (rest optional-loa+content) ...)]))]))
+
+; A Tag is a Symbol, representing the name of an XML element.
+(define H1 'h1)
+(define P 'p)
+(define BR 'br)
+
+; An Attribute is a (list AttrName AttrValue)
+; representing an attribute name-value pair in an XML element.
+(define HREF-NEU (list 'href "http://northeastern.edu"))
+(define IMG-SRC (list 'src "ball.gif"))
+
+; Template:
+; attribute-fn : Attribute -> ???
+(define (attribute-fn a)
+  (... (first a) ... (second a) ...))
+
+; An AttrName is a Symbol, 
+; representing the name of an XML attribute.
+
+; An AttrValue is a String, 
+; representing the value associated with an XML attribute.
+
+;Functions begin ------------------------
+
+; list-of-attributes? : Any -> Boolean 
+; Returns true if the given value a list of attributes
+(begin-for-test
+  (check-true (list-of-attributes? '())
+              "")
+  (check-true (list-of-attributes? (second IMG))
+              ""))
+; Strategy: function composition
+(define (list-of-attributes? lst)
+  (and (list? lst)
+       (or (empty? lst)
+           (cons? (first lst)))))
+
+; list-of-xexprs? : Any -> Boolean 
+; Returns true if the given value a list of xexpr
+(begin-for-test
+  (check-true (list-of-xexprs? (list 'a 'b))
+              "")
+  (check-false (list-of-xexprs? "a")
+               ""))
+; Strategy: function composition
+(define (list-of-xexprs? lst)
+  (and (list? lst)
+       (or (empty? lst)
+           (andmap (lambda (x) (xexpr-element? x)) 
+                   lst))))
+
+; xexpr-element? : Any -> Boolean
+; Returns true if xe is a valid XML element.
+(begin-for-test
+  (check-true (xexpr-element? 'a)
+              "")
+  (check-true (xexpr-element? "a")
+              "")
+  (check-true (xexpr-element? 10)
+              "")
+  (check-true (xexpr-element? HTML-EMPTY)
+              "")
+  (check-true (xexpr-element? IMG)
+              "")
+  (check-true (xexpr-element? HTML-WITH-TEXT)
+              "")
+  (check-true (xexpr-element? '(start))
+              "")
+  (check-true (xexpr-element? '(src "a"))
+              "")
+  (check-false (xexpr-element? '(()))
+               "")
+  (check-false (xexpr-element? '())
+               "")
+  (check-false (xexpr-element? '((src "a")(title "b")))
+               "")
+  (check-false (xexpr-element? '(a ((src "a"))
+                                   ((title "b"))))
+               ""))
+; Strategy: Function composition
+(define (xexpr-element? xe) 
+  (if (atom? xe)
+      #true
+      (if (and (not (empty? xe))
+               (have-tag? xe))
+          (rest-content-legal? xe)
+          #false)))
+
+;atom? Any -> Boolean
+;Returns true if xe is a symbol, string or a number 
+;STRATEGY : Function composition
+(define (atom? xe)
+  (or (symbol? xe) 
+      (string? xe)
+      (number? xe)))
+
+;have-tag? : Any -> Boolean
+;Returns true if the entered expression has a Tag
+;STRATEGY : Function compostion 
+(define (have-tag? xe)
+  (symbol? (first xe)))
+
+;rest-content-legal? : Any -> Boolean
+;Returns true if the expression besides the tag is a legal Xexpr
+;STRATEGY : Function composition
+(define (rest-content-legal? xe)
+  (local ((define optional-loa+content (rest xe)))
+    (if (empty? optional-loa+content)
+        #true
+        (rest-content-expr? optional-loa+content))))
+
+;rest-content-expr? : Any -> Boolean
+;Returns true if rest of the content follows the Xexpr structure
+;STRATEGY : Function composition
+(define (rest-content-expr? xe)
+  (local ((define loa-or-lox (first xe)))
+    (if (list-of-attributes? loa-or-lox)
+        (list-of-xexprs? (rest xe))
+        (or (list-of-xexprs? loa-or-lox)
+            (xexpr-element? loa-or-lox)))))
+
+; xexpr-tag : Xexpr -> Maybe<Tag>
+; Returns the tag of element xe.
+(begin-for-test
+  (check-equal? (xexpr-tag IMG)
+                'img
+                "")
+  (check-equal? (xexpr-tag HTML-EMPTY)
+                'html
+                "")
+  (check-equal? (xexpr-tag '(start))
+                'start
+                "")
+  (check-equal? (xexpr-tag 'a)
+                #false
+                "")
+  (check-equal? (xexpr-tag "1")
+                #false
+                "")
+  (check-equal? (xexpr-tag 1)
+                #false
+                ""))
+;Stategy: Data decomposition on xe : Xexpr
+(define (xexpr-tag xe)
+  (cond 
+    [(symbol? xe) #false]
+    [(string? xe) #false]
+    [(number? xe) #false]
+    [else (first xe)]))
+
+; xexpr-attributes : Xexpr -> ListOf<Attribute>
+; Returns the attributes of the given XML element.
+(begin-for-test
+  (check-equal? (xexpr-attributes IMG)
+                (list
+                 (list 'src "balls.png")
+                 (list 'width "100")
+                 (list 'height "50"))
+                "")
+  (check-equal? (xexpr-attributes HTML-EMPTY)
+                '((lang "en-US"))
+                "")
+  (check-equal? (xexpr-attributes 'a)
+                '()
+                "")
+  (check-equal? (xexpr-attributes '(start))
+                '()
+                ""))
+;STRATEGY : Data decomposition on xe : Xexpr
+(define (xexpr-attributes xe) 
+  (cond
+    [(symbol? xe) '()]
+    [(string? xe) '()]
+    [(number? xe) '()]
+    [else (local ((define optional-loa+content (rest xe)))
+            (if (empty? optional-loa+content)
+                '()
+                (local ((define loa-or-lox (first optional-loa+content)))
+                  (if (list-of-attributes? loa-or-lox)
+                      loa-or-lox
+                      '()))))]))
+
+; xexpr-content : Xexpr -> ListOf<Xexpr>
+; Extracts the content of an XML element.
+; An element's tag and attributes are not part of its content.
+(begin-for-test
+  (check-equal? (xexpr-content IMG)
+                '()
+                "")
+  (check-equal? (xexpr-content HTML-EMPTY)
+                (list
+                 (list
+                  'body
+                  (list 'p)
+                  (list 'br)
+                  (list 'p)
+                  (list 'br)))
+                "")
+  (check-equal? (xexpr-content 'a)
+                '()
+                "")
+  (check-equal? (xexpr-content '(start))
+                '()
+                ""))
+;STRATEGY : Data decomposition on xe : Xexpr
+(define (xexpr-content xe) 
+  (cond
+    [(symbol? xe) '()]
+    [(string? xe) '()]
+    [(number? xe) '()]
+    [else (local ((define optional-loa+content (rest xe)))
+            (if (empty? optional-loa+content)
+                '()
+                (local ((define loa-or-lox (first optional-loa+content)))
+                  (if (list-of-attributes? loa-or-lox)
+                      (rest optional-loa+content)
+                      optional-loa+content))))]))
+
+; attribute-value : ListOf<Attribute> AttrName -> Maybe<AttrValue>
+; Returns the value of first attribute in loa named aname.
+; Returns #f if no attribute in loa has the name aname.RE
+(begin-for-test
+  (check-equal? (attribute-value (first (rest IMG)) 'src)
+                "balls.png"
+                "")
+  (check-false (attribute-value (first (rest IMG)) 'name)
+               "")
+  (check-false (attribute-value '() 'src)
+               ""))
+;STRATEGY : Data decomposition on loa : ListOf<Attribute>
+(define (attribute-value loa aname)
+  (cond 
+    [(empty? loa) #false]
+    [else (local ((define attr (filter (lambda (a) (eq? (first a) aname))
+                                       loa)))
+            (if (empty? attr)
+                #false
+                (second (first attr))))]))
+
+; get-value : Xexpr AttrName -> Maybe<AttrValue>
+; Returns the value of the first attribute in xe named aname.
+(begin-for-test
+  (check-false (get-value 'a 'src)
+               "")
+  (check-false (get-value "a" 'src)
+               "")
+  (check-false (get-value 10 'src)
+               #false)
+  (check-equal? (get-value IMG 'src)
+                "balls.png"
+                "ball.png")
+  (check-false (get-value '(body (br) (h) (p))
+                          'src)
+               "")
+  (check-false (get-value '(start)
+                          'src)
+               ""))
+;STRATEGY : Data decomposition on xe : Xexpr
+(define (get-value xe aname) 
+  (cond
+    [(symbol? xe) #false]
+    [(string? xe) #false]
+    [(number? xe) #false]
+    [else (local ((define optional-loa+content (rest xe)))
+            (if (empty? optional-loa+content)
+                #false
+                (local ((define loa-or-lox (first optional-loa+content)))
+                  (if (list-of-attributes? loa-or-lox)
+                      (attribute-value loa-or-lox aname)
+                      #false))))]))
+
+; xexpr-find : Xexpr AttrName -> ListOf<AttrValue>
+; Searches xe and nested elements in xe for attributes named aname
+; and returns all the values for these attributes.
+(begin-for-test
+  (check-equal? (xexpr-find IMG 'src)
+                (list "balls.png")
+                "ball.png")
+  (check-equal? (xexpr-find xe1 'state)
+                '("red" "brown" "black" "green" "yellow")
+                "ball.png")
+  (check-equal? (xexpr-find HTML-WITH-TEXT 'p)
+                '()
+                "")
+  (check-equal? (xexpr-find '(start) 'p)
+                '()
+                ""))
+;STRATEGY : Function composition
+(define (xexpr-find xe aname)
+  (local (;ListOf<AttrValue> ->  ListOf<AttrValue>
+          ;remove "false" values 
+          (define (filter-false loav)
+            (filter (lambda (v) (not (false? v)))
+                    loav))
+          ;Xexpr AttrName -> ListOf<AttrValue>
+          ;find all values in xe and nested elements in xe whose attributes 
+          ;name is aname, including false
+          (define (search xe aname)
+            (append (list (get-value xe aname))
+                    (foldr  (lambda (x1 lst) (append (xexpr-find x1 aname) lst))
+                            '()
+                            (xexpr-content xe))))
+          ;Xexpr AttrName -> ListOf<AttrValue>
+          ;find all values in xe and nested elements in xe whose attributes 
+          ;name is aname, excluding false
+          (define (find xe aname)
+            (filter-false (search xe aname))))
+    (find xe aname)))
+
+; xexpr-depth : Xexpr -> Natural
+; Returns the depth of the deepest nested Xexpr. 
+; An Xexpr with no nested elements has depth 0.
+(begin-for-test
+  (check-equal? (xexpr-depth xe1)
+                4
+                "")
+  (check-equal? (xexpr-depth HTML-WITH-TEXT)
+                4
+                "")
+  (check-equal? (xexpr-depth HTML-EMPTY)
+                2
+                "")
+  (check-equal? (xexpr-depth "1")
+                0
+                "")
+  (check-equal? (xexpr-depth 1)
+                0
+                "")
+  (check-equal? (xexpr-depth 'a)
+                0
+                "")
+  (check-equal? (xexpr-depth '(start "abc"))
+                1
+                ""))
+;STRATEGY: Data decomposition on xe : Xexpr
+(define (xexpr-depth xe)
+  (local ((define level 0))
+    (cond
+      [(symbol? xe) 0]
+      [(string? xe) 0]
+      [(number? xe) 0]
+      [else (if (empty? (xexpr-content xe))
+                0
+                (add1 (first (sort (map (lambda (x) (xexpr-depth x))
+                                        (xexpr-content xe))
+                                   >))))])))
+
+; xexpr-elements : Xexpr Tag -> ListOf<Xexpr>
+; Returns a list of all elements in xe whose tag is t.
+; An element with tag t may be nested inside another element with 
+; the same tag and this function returns both.
+(begin-for-test
+  (check-equal? (xexpr-elements IMG 'img)
+                (cons IMG '())
+                "")
+  (check-equal? (xexpr-elements HTML-WITH-TEXT 'p)
+                (list
+                 (list 'p "Here is assignment " 5)
+                 (list 'p "This is a " (list 'b "data") " definition."))
+                ""))
+;STRATEGY : Data decomposition on xe : Xexpr
+(define (xexpr-elements xe t)
+  (cond
+    [(symbol? xe) '()]
+    [(string? xe) '()]
+    [(number? xe) '()]
+    [else (local(;ListOf<Xexpr> Tag -> ListOf<Xexpr>
+                 ; Returns a list of all elements in xe whose tag is t.
+                 (define (elements-in-content lst t)
+                   (foldr (lambda (xe rl)  (append (xexpr-elements xe t) rl))
+                          '()
+                          lst)))
+            (if (eq? (xexpr-tag xe) t)
+                (append (list xe) (elements-in-content (xexpr-content xe) t))
+                (elements-in-content (xexpr-content xe) t)))]))
+
+;Function to crawl information from the web
+
+(define PREFIX "https://www.google.com/finance?q=")
+;(define PREFIX "http://www.google.com")
+(define SUFFIX "&btnG=Search")
+(define SIZE 22)
+(define SPACER (text "  " SIZE 'white))
+(define FALSE "false")
+
+;StockWorld data definition --
+
+(define-struct data [price delta])
+; StockWorld is
+;    (make-data String String)
+; price and delta specify the current price and how 
+; much it changed since the last update
+
+; String -> StockWorld
+; retrieves stock price and its change of the specified company
+; every 15 seconds and displays together with available time stamp
+(define (stock-alert company)
+  (local ((define url (string-append PREFIX company SUFFIX))
+          
+          ; [StockWorld -> StockWorld]
+          ; retrieves price and priceChange from the url
+          (define (retrieve-stock-data w)
+            (local ((define x (read-xexpr/web url)))
+              (make-data (get x "price") (get x "priceChange"))))
+          
+          ; StockWorld -> Image 
+          ; renders the stock market data as a single long line 
+          (define (render-stock-data w)
+            (local ((define pt (text (data-price w) SIZE 'black))
+                    (define dt (text (data-delta w) SIZE 'red)))
+              (overlay (beside pt SPACER dt)
+                       (rectangle 300 35 'solid 'white))))
+          
+          ; Xexpr String -> String
+          ; Returns the value of the price/delta if attribute was found,
+          ; false otherwise
+          (define (get x s)
+            (local ((define result (get-expr x s)))
+              (if (string? result)
+                  result
+                  FALSE)))
+          
+          ;Xexpr String -> [MaybeString]
+          ;retrieves the value of the "content" attribute for 
+          ; a 'meta element with attribute "itemprop" and value s 
+          (define (get-expr x s)
+            (local ((define valid-meta 
+                      (rest (rest (xexpr-elements x 'meta))))
+                    (define (filtmeta lst)
+                      (filter 
+                       (lambda (x) (string=? s (get-value x 'itemprop)))
+                       lst)))
+              (if (empty? (filtmeta valid-meta))
+                  #false
+                  (get-value (first (filtmeta valid-meta)) 'content)))))
+    ; – IN – 
+    (big-bang (retrieve-stock-data 'no-use)
+              [on-tick retrieve-stock-data 15]
+              [to-draw render-stock-data]
+              [name company])))
+
+;q(stock-alert "Baidu")
+
+;ALTERNATE DATA DEFINITION : 
+
+; Using XWords
+
+; A XWord is '(word ((text String))).
+
+; An Xexpr is one of:
+; - Symbol
+; - XWord
+; - Number
+; - (cons Tag (cons ListOf<Attribute> ListOf<Xexpr>))
+; - (cons Tag ListOf<Xexpr>)
+; Represents an XML element.
+
+; An AttrValue is a XWord, 
+; representing the value associated with an XML attribute.
+
+
+;Functions affected : 
+
+;BEFORE : 
+;(define (xexpr-element? xe) 
+;  (cond
+;    [(symbol? xe) #true]
+;    [(string? xe) #true]
+;    [(number? xe) #true]
+;    [else (if (and (not (empty? xe))
+;                   (have-tag? xe))
+;              (rest-content-legal? xe)
+;              #false)]))
+
+;AFTER:
+;(define (xexpr-element? xe) 
+;  (cond
+;    [(symbol? xe) #true]
+;    [(xword? xe) #true]
+;    [(number? xe) #true]
+;    [else (if (and (not (empty? xe))
+;                   (have-tag? xe))
+;              (rest-content-legal? xe)
+;              #false)]))
+
+; - (string? xe) is replaced by (xword? xe). Therefore, if the given 
+;   expression(Xexpr) contains one attribute, there is no need to go to the  
+;    else part (no need to check if it is a valid expression)
+
+
+; get-value 
+;BEFORE:
+;(define (get-value xe aname) 
+;  (cond
+;    [(symbol? xe) #false]
+;    [(string? xe) #false]
+;    [(number? xe) #false]
+;    [else (local ((define optional-loa+content (rest xe)))
+;            (if (empty? optional-loa+content)
+;                      #false
+;                      (local ((define loa-or-lox (first optional-loa+content)))
+;                        (if (list-of-attributes? loa-or-lox)
+;                            (attribute-value loa-or-lox aname)
+;                            #false))))]))
+
+;AFTER :
+;(define (get-value xe aname) 
+;  (cond
+;    [(symbol? xe) #false]
+;    [(xword? xe) (get-value-from-rest xe)]
+;    [(number? xe) #false]  
+;    [else (get-value-from-rest xe)]))
+
+
+;(define (get-value-from-rest xe)
+;  (local ((define optional-loa+content (rest xe)))
+;            (if (empty? optional-loa+content)
+;                      #false
+;                      (local ((define loa-or-lox (first optional-loa+content)))
+;                        (if (list-of-attributes? loa-or-lox)
+;                            (attribute-value loa-or-lox aname)
+;                            #false)))))
+
+
+; For this function, suppose the given xe is a XWord, then we need to create
+; another function that would compute the value for that particular XWord.
+
+
+;stock-alert : 
+
+;get-expr :
+
+; Since the value passed to get-expr is a XWord, this XWord has to be decomposed
+; into a String to process it.
+

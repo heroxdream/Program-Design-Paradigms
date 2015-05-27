@@ -1,0 +1,113 @@
+Partner1 Name: Anoop
+Partner1 CCS ID: anpspk
+
+Partner2 Name: Hanxuan
+Partner2 CCS ID: hanxuan
+
+
+Grade Report
+
+Design Grading:
+
+Correctness:            10/10
+Data Design:            4/6
+Function Specification: 4/6
+Implementation:         4/6
+Style:                  5/6
+
+Deductions:
+
+Design Total:         27/34
+
+Notes:
+	- Style 
+		- Use of magic constants like "("
+	- Data Design 
+		- expr-fn template incorrect: review the template recipe for mixed data
+		- expr template should directly decompose add and mul in expr-fn
+		- your template has one extra call in call graph
+   		- shape of the functions doesnt match shape of the data defs
+	- Function Specification 
+		- Examples missing from most of the function 
+		- expr->strings/layer: information about layer is missing in the purpose statement
+		- integer->list : signature incorrect
+		- expression->list : incorrect signature
+		- integer->list : function name should be number->list	
+		- function specification of expr->nelist-nelist-string - map function is missing
+		- [X X -> X] should be any or should be a new itemized data
+	- Implementation 
+		- expr->strings/layer : implementation not matching the template
+		- integer->list : whats the purpose of using local here
+		- you are using accumulator but not using accumulator style in the functions
+		
+
+
+Codewalk Grading:
+
+Partner1:
+
+Q&A:                      5/10
+Presentation:              3/6
+
+Deductions:
+Notes:
+Q: what kind of data?
+A: itemized data
+Q: what is it called when we have itemized+compound data?
+A: couldnt answer
+Q: what is mixed data?
+A: couldnt answer
+Q: template for nelist?
+A: ans ok
+Q: how do you know list-fn needs recursive call?
+A: ans ok --- look at data def
+Q: what's the purpose of an accumulator
+A: ans ok context
+Q: prefix-oneline-layout: is the signature correct? strategy?
+A: said yes, but strategy should be data decomp
+Q: what is difference between examples and tests?
+A: couldnt ans
+
+Presentation:
+- required repeating of the question and lots of clarification and help
+- dont interrupt partner when speaking
+
+Partner 1 Codewalk Total  8/16
+
+
+Partner2:
+
+Q&A:                      4/10
+Presentation:              3/6
+
+Deductions:
+Notes:
+Q: what kind of data?
+A: itemized data
+Q: what is it called when we have itemized+compound data?
+A: couldnt answer
+Q: what is mixed data?
+A: couldnt answer
+Q: what is template for mixed data?
+A: what i have done here (not correct)
+Q: template for possibly empty list?
+A: ans ok
+Q: how do you know list-fn needs recursive call?
+A: couldnt ans
+Q: what does it mean for fn to follow strategy
+A: ans ok
+Q: diff between examples and tests?
+A: couldnt ans
+
+Presentation:
+- required repeating of the question and lots of clarification and help
+- dont interrupt partner when speaking
+
+Partner 2 Codewalk Total: 7/16
+
+
+
+Overall Score for Partner 1: 35/50
+Overall Score for Partner 2: 34/50
+
+Other Notes:
