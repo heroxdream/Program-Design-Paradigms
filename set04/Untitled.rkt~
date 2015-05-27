@@ -1,0 +1,26 @@
+;; The first three lines of this file were inserted by DrRacket. They record metadata
+;; about the language level of this file in a form that our tools can easily process.
+#reader(lib "htdp-beginner-abbr-reader.ss" "lang")((modname Untitled) (read-case-sensitive #t) (teachpacks ((lib "arrow-gui.rkt" "teachpack" "htdp"))) (htdp-settings #(#t constructor repeating-decimal #f #t none #f ((lib "arrow-gui.rkt" "teachpack" "htdp")))))
+(define good
+  (cons "g" (cons "o" (cons "o" (cons "d" '())))))
+(define lla
+  (cons "l" (cons "l" (cons "a" '()))))
+
+(define-struct editor [prec postc])
+; An Editor is (make-editor Lo1S Lo1S)
+; INTERP: pre represents the text befor cursor,
+;         while post represents the text after cursor
+(define e1 (make-editor lla good))
+e1
+
+(implode (reverse (editor-prec e1)))
+
+(length (editor-prec e1))
+
+(cons "m" good)
+
+(remove (first good) good)
+
+
+(define (delete-fisrt l)
+  (remove (first l) l))

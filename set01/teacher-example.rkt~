@@ -1,0 +1,130 @@
+;; The first three lines of this file were inserted by DrRacket. They record metadata
+;; about the language level of this file in a form that our tools can easily process.
+#reader(lib "htdp-beginner-reader.ss" "lang")((modname Untitled) (read-case-sensitive #t) (teachpacks ((lib "arrow-gui.rkt" "teachpack" "htdp"))) (htdp-settings #(#t constructor repeating-decimal #f #t none #f ((lib "arrow-gui.rkt" "teachpack" "htdp")))))
+(require 2htdp/universe)
+(require 2htdp/image)
+(require rackunit)
+(require "extras.rkt")
+ 
+; canvas constants
+(define CENTER-X 200) ; Coordinate
+(define CENTER-Y 200) ; Coordinate
+(define WIDTH (* 2 CENTER-X))  ; pixels
+(define HEIGHT (* 2 CENTER-Y)) ; pixels
+(define EMPTY-SCENE (empty-scene WIDTH HEIGHT))   ; Image
+(define END-TEXT-IMG (text "THE END" 24 "black")) ; Image
+ 
+; A Pixels is a NonNegReal, representing a canvas distance.
+ 
+; Ball definition ————————————————————
+; A Ball is a Coordinate, representing the Ball's x position.
+ 
+(define INIT-BALL CENTER-X)
+(define BALL-RADIUS 40) ; pixels
+(define BALL-AT-RIGHT-EDGE (- WIDTH BALL-RADIUS)) ; Coordinate
+(define BALL-IMG (circle BALL-RADIUS "solid" "red")) ; Image
+(define VELOCITY 5) ; pixels/tick
+(define BALL-LEFT-STEP-SIZE 10) ; pixels
+ 
+; World definition ———————————————————-
+; A World is a Ball
+; INTERP: represents a Ball on a canvas.
+(define INIT-WORLD INIT-BALL)
+ 
+; World functions ————————————————————
+ 
+; run : World -> World
+; Starts the simulation.
+(define (run init-world)
+  (big-bang
+   init-world
+   (on-tick next-world)
+   (on-draw draw-world)
+   (on-key key-handler)
+   (stop-when last-world? draw-last-world)))
+ 
+; next-world : World -> World
+; Computes the next World state after w.
+(begin-for-test
+  (check-equal? (next-world INIT-WORLD) (+ INIT-WORLD VELOCITY)
+                "compute 2nd world state"))
+(define (next-world w)
+  (next-ball w))
+ 
+; draw-world : World -> Image
+; Renders the current World state w.
+(begin-for-test
+  (check-equal? (draw-world INIT-WORLD)
+                (place-image BALL-IMG CENTER-X CENTER-Y EMPTY-SCENE)
+                "draw initial world"))
+(define (draw-world w)
+  (draw-ball-on w EMPTY-SCENE))
+ 
+; key-handler : World KeyEvent -> Worldm 
+; Computes the next World state in response to key press kev:
+; - "left" moves ball left 10 pixels
+; - other keys leave w unchanged
+(begin-for-test
+  (check-equal? (key-handler INIT-WORLD "right") INIT-WORLD "invalid key")
+  (check-equal? (key-handler INIT-WORLD "left") (- INIT-WORLD (* 2 VELOCITY))
+                "valid key (left)"))
+(define (key-handler w kev)
+  (cond
+    [(key=? kev "left") (move-ball-left w BALL-LEFT-STEP-SIZE)]
+    [else w]))
+ 
+; draw-last-world : World -> Image
+; Renders the last World state w.
+(begin-for-test
+  (check-equal?
+   (draw-last-world INIT-WORLD)
+   (place-image END-TEXT-IMG CENTER-X CENTER-Y (draw-world INIT-WORLD))
+   "world with THE END text"))
+(define (draw-last-world w)
+  (place-image END-TEXT-IMG CENTER-X CENTER-Y (draw-world w)))
+ 
+; last-world? : World -> Boolean
+; Returns true if w should end the simulation.
+(begin-for-test
+  (check-false (last-world? INIT-WORLD) "simulation continues")
+  (check-true (last-world? (add1 BALL-AT-RIGHT-EDGE)) "simulation ends"))
+(define (last-world? w)
+  (ball-off-canvas? w))
+ 
+; Ball functions ————————————————————-
+ 
+; next-ball : Ball -> Ball
+; Computes the next Ball position.
+(begin-for-test
+  (check-equal? (next-ball -5) 0 "negative position")
+  (check-equal? (next-ball 5) 10 "positive position"))
+(define (next-ball b)
+  (+ b VELOCITY))
+ 
+; draw-ball-on : Ball Image -> Image
+; Draws the Ball b horizontally-centered on Image img
+(begin-for-test
+  (check-equal? (draw-ball-on INIT-BALL EMPTY-SCENE)
+                (place-image BALL-IMG INIT-BALL CENTER-Y EMPTY-SCENE)
+                "draw initial ball (at center)"))
+(define (draw-ball-on b img)
+  (place-image BALL-IMG b CENTER-Y img))
+ 
+; ball-off-canvas? : World -> Boolean
+; Returns true if any part of b is off the canvas.
+(begin-for-test
+  (check-false (ball-off-canvas? CENTER-X) "fully in canvas")
+  (check-false (ball-off-canvas? BALL-AT-RIGHT-EDGE) "exactly at edge: ok")
+  (check-true (ball-off-canvas? (add1 BALL-AT-RIGHT-EDGE))
+              "partially off canvas"))
+(define (ball-off-canvas? b)
+  (> b BALL-AT-RIGHT-EDGE))
+ 
+; move-ball-left: Ball Pixels -> Ball
+; Moves the given Ball b to the left by dist pixels.
+(begin-for-test
+  (check-equal? (move-ball-left INIT-BALL BALL-LEFT-STEP-SIZE)
+                (- INIT-BALL BALL-LEFT-STEP-SIZE)
+                "move left from center"))
+(define (move-ball-left b dist)
+  (- b dist))

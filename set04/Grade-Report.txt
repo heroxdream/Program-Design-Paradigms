@@ -1,0 +1,57 @@
+CCS ID:
+Husky ID:
+
+Grade Report
+
+Design Grading:
+
+Correctness:           6__/10
+Data Design:            4_/5
+Function Specification: 4_/5
+Implementation:         3_/5
+Style:                  3_/5
+
+Deductions:
+
+Offline Total:         20__/30
+
+Notes:
+
+
+Codewalk Grading:
+
+Q&A:                      __/10
+Data Design Alternatives:  4_/5
+Presentation:              _/5
+
+Deductions:
+
+Online Total:             __/20
+
+Notes:
+
+alternate data definiton: 4
+1. in first alt definiton your ListOfPosns should be a non empty list.
+
+
+Overall Score: 24__/35
+
+Other Notes:
+
+Data Design:            4_/5
+1. in worm what is a head, write a interpretation for that.
+2. in template for worm, direction is missing
+
+
+Function Specification: 4_/5
+1. rearrange-segment: method signature is wrong
+
+Implementation:         3_/5
+1. in method eat-food->list  you are using (first list), since you never specified that
+  it is a non empty list so chances can be list is empty so first of list will fail.
+   follow the template.
+2. in functions controlling direction such as turn-left you should not ignore right. here it should flip
+  to opposite direction
+Style:                 3 _/5
+1. excedding 80 character per line 
+2. if your worm is going in right direction then left key does not work
